@@ -1,0 +1,26 @@
+{
+  "estiramiento_brazo_izquierdo": {
+    "nombre": "Estiramiento Lateral Izquierdo",
+    "criterios": [
+      {
+        "puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"],
+        "rango_esperado": [160, 180]
+      }
+    ],
+    "hold_time_seconds": 3
+  },
+  "sentadilla_isometrica": {
+    "nombre": "Sentadilla Isométrica (Wall Sit)",
+    "criterios": [
+      {
+        "puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"],
+        "rango_esperado": [80, 100]
+      },
+      {
+        "puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"],
+        "rango_esperado": [80, 100]
+      }
+    ],
+    "hold_time_seconds": 5
+  }
+}
