@@ -1,6 +1,8 @@
 {
   "estiramiento_brazo_izquierdo": {
     "nombre": "Estiramiento Lateral Izquierdo",
+    "categoria": "Pausas Activas",
+    "instrucciones": "Extiende el brazo izquierdo hacia un lado, bien recto, y mantenlo.",
     "criterios": [
       {
         "puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"],
@@ -9,8 +11,46 @@
     ],
     "hold_time_seconds": 3
   },
+  "estiramiento_brazo_derecho": {
+    "nombre": "Estiramiento Lateral Derecho",
+    "categoria": "Pausas Activas",
+    "instrucciones": "Extiende el brazo derecho hacia un lado, bien recto, y mantenlo.",
+    "criterios": [
+      {
+        "puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+        "rango_esperado": [160, 180]
+      }
+    ],
+    "hold_time_seconds": 3
+  },
+  "brazos_arriba": {
+    "nombre": "Brazos Arriba",
+    "categoria": "Pausas Activas",
+    "instrucciones": "Levanta los dos brazos por encima de la cabeza, rectos, y mantenlos.",
+    "criterios": [
+      {
+        "puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"],
+        "rango_esperado": [150, 180]
+      },
+      {
+        "puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"],
+        "rango_esperado": [150, 180]
+      },
+      {
+        "puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"],
+        "rango_esperado": [150, 180]
+      },
+      {
+        "puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+        "rango_esperado": [150, 180]
+      }
+    ],
+    "hold_time_seconds": 3
+  },
   "sentadilla_isometrica": {
     "nombre": "Sentadilla Isométrica (Wall Sit)",
+    "categoria": "Fuerza",
+    "instrucciones": "Ponte de lado a la cámara, apoya la espalda en la pared y baja hasta que tus rodillas formen unos 90°.",
     "criterios": [
       {
         "puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"],

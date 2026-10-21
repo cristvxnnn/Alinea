@@ -2,8 +2,7 @@ package com.example.alinea.core
 
 enum class Postura { APROBADO, CORRIGIENDO, INCORRECTO }
 enum class EstadoReto { ANALIZANDO, SOSTENIENDO, EXITO }
-enum class Sonido { TICK, EXITO, ERROR }
-
+enum class Sonido { TICK, EXITO, ERROR, LISTO }
 data class ResultadoCriterio(val angulo: Double, val postura: Postura)
 
 data class Resultado(

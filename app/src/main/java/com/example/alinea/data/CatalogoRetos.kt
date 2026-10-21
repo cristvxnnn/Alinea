@@ -36,7 +36,14 @@ object CatalogoRetos {
                 Criterio(indices, min, max)
             }
             retos.add(
-                Reto(id, o.getString("nombre"), criterios, o.getDouble("hold_time_seconds"))
+                Reto(
+                    id = id,
+                    nombre = o.getString("nombre"),
+                    criterios = criterios,
+                    tiempoObjetivo = o.getDouble("hold_time_seconds"),
+                    categoria = o.optString("categoria", "General"),
+                    instrucciones = o.optString("instrucciones", ""),
+                )
             )
         }
         return retos

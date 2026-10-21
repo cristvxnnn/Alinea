@@ -15,8 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Puntos normalizados (0..1) y tamaño de la imagen analizada. */
-data class PoseFrame(val puntos: List<Punto>, val ancho: Int, val alto: Int)
-
+data class PoseFrame(
+    val puntos: List<Punto>,
+    val visibilidad: List<Float>,
+    val ancho: Int,
+    val alto: Int,
+)
 class DetectorPose(context: Context) {
     private val _pose = MutableStateFlow<PoseFrame?>(null)
     val pose: StateFlow<PoseFrame?> = _pose.asStateFlow()
@@ -48,7 +52,12 @@ class DetectorPose(context: Context) {
     private fun publicar(resultado: PoseLandmarkerResult, ancho: Int, alto: Int) {
         val primera = resultado.landmarks().firstOrNull()
         _pose.value = if (primera == null) null
-        else PoseFrame(primera.map { Punto(it.x(), it.y()) }, ancho, alto)
+        else PoseFrame(
+            puntos = primera.map { Punto(it.x(), it.y()) },
+            visibilidad = primera.map { it.visibility().orElse(0f) },
+            ancho = ancho,
+            alto = alto,
+        )
     }
 
     fun detectar(bitmap: Bitmap, tiempoMs: Long) {

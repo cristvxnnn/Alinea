@@ -54,6 +54,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     // MediaPipe Tasks Vision
     implementation("com.google.mediapipe:tasks-vision:1.0.0")
+    implementation(libs.androidx.navigation.compose)
 
     // CameraX
     val cameraxVersion = "1.6.2"

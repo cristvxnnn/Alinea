@@ -10,6 +10,8 @@ data class Reto(
     val nombre: String,
     val criterios: List<Criterio>,
     val tiempoObjetivo: Double,
+    val categoria: String = "General",
+    val instrucciones: String = "",
 )
 val INDICE_LANDMARK = mapOf(
     "NOSE" to 0,

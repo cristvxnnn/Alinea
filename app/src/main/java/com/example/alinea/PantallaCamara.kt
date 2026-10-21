@@ -22,6 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,6 +58,8 @@ private val VERDE = Color(0xFF39FF14)
 private val AMARILLO = Color(0xFFFFEB00)
 private val ROJO = Color(0xFFFF1744)
 
+private enum class Fase { CALIBRANDO, RETO }
+
 private fun colorPostura(p: Postura) = when (p) {
     Postura.APROBADO -> VERDE
     Postura.CORRIGIENDO -> AMARILLO
@@ -64,7 +67,7 @@ private fun colorPostura(p: Postura) = when (p) {
 }
 
 @Composable
-fun PantallaCamara() {
+fun PantallaCamara(reto: Reto?, onVolver: () -> Unit) {
     val context = LocalContext.current
     var tienePermiso by remember {
         mutableStateOf(
@@ -81,7 +84,7 @@ fun PantallaCamara() {
     }
 
     if (tienePermiso) {
-        VistaCamara()
+        VistaCamara(reto, onVolver)
     } else {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -94,7 +97,6 @@ fun PantallaCamara() {
                 Text("Dar permiso")
             }
             Spacer(Modifier.height(8.dp))
-            // Si Android ya no vuelve a preguntar, el permiso se activa desde los ajustes
             Button(onClick = {
                 context.startActivity(
                     Intent(
@@ -105,6 +107,8 @@ fun PantallaCamara() {
             }) {
                 Text("Abrir ajustes de la app")
             }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onVolver) { Text("Volver") }
         }
     }
 }
@@ -117,43 +121,44 @@ private fun MensajeError(texto: String) {
 }
 
 @Composable
-private fun VistaCamara() {
+private fun VistaCamara(reto: Reto?, onVolver: () -> Unit) {
     val contexto = LocalContext.current
-    val cargado = remember { runCatching { CatalogoRetos.cargar(contexto).first() } }
-    // El detector solo se crea si el reto cargó bien
-    val detectorCargado = remember {
-        if (cargado.isSuccess) runCatching { DetectorPose(contexto) } else null
+    val detectorCargado = remember(reto) {
+        if (reto != null) runCatching { DetectorPose(contexto) } else null
     }
-    val reto = cargado.getOrNull()
     val detector = detectorCargado?.getOrNull()
 
     when {
-        reto == null ->
-            MensajeError("No se pudo cargar ejercicios.json: ${cargado.exceptionOrNull()?.message}")
+        reto == null -> MensajeError("No se encontró el ejercicio.")
         detector == null ->
             MensajeError("No se pudo iniciar el detector de pose: ${detectorCargado?.exceptionOrNull()?.message}")
-        else -> SesionReto(reto, detector)
+        else -> SesionReto(reto, detector, onVolver)
     }
 }
 
 @Composable
-private fun SesionReto(reto: Reto, detector: DetectorPose) {
+private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit) {
     val contexto = LocalContext.current
     val actividad = contexto as ComponentActivity
     val ejecutor = remember { Executors.newSingleThreadExecutor() }
     val evaluador = remember(reto) { EvaluadorReto(reto) }
+    val calibrador = remember { Calibrador() }
     val sonidos = remember { Sonidos() }
+    val camara = remember { arrayOfNulls<ProcessCameraProvider>(1) }
     val pose by detector.pose.collectAsState()
+
+    var fase by remember { mutableStateOf(Fase.CALIBRANDO) }
+    var calibracion by remember { mutableStateOf<EstadoCalibracion?>(null) }
+    var progresoCalibracion by remember { mutableFloatStateOf(0f) }
     var resultado by remember { mutableStateOf<Resultado?>(null) }
     var errorCamara by remember { mutableStateOf<String?>(null) }
 
-    // Medición temporal de FPS (RNF-02)
-    val medida = remember { LongArray(2) }   // [0] inicio de ventana (ms), [1] cuadros
-    var fps by remember { mutableStateOf(0) }
+    val medida = remember { LongArray(2) }
+    var fps by remember { mutableIntStateOf(0) }
 
-    // Cada vez que llega una pose nueva: evaluar, sonar y actualizar la UI
     LaunchedEffect(pose) {
         val t = SystemClock.elapsedRealtime()
+        val ahora = t / 1000.0
         if (medida[0] == 0L) medida[0] = t
         medida[1]++
         if (t - medida[0] >= 1000) {
@@ -163,13 +168,26 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
         }
 
         val p = pose
-        if (p == null) {
+        if (fase == Fase.CALIBRANDO) {
+            if (p == null) {
+                calibracion = null
+                progresoCalibracion = calibrador.actualizar(false, ahora)
+            } else {
+                val estado = evaluarSilueta(p.puntos, p.visibilidad)
+                calibracion = estado
+                val yaEstabaListo = calibrador.listo
+                progresoCalibracion = calibrador.actualizar(estado.completa, ahora)
+                if (!yaEstabaListo && calibrador.listo) {
+                    sonidos.reproducir(Sonido.LISTO)
+                    fase = Fase.RETO
+                }
+            }
+        } else if (p == null) {
             evaluador.perderCuerpo()?.let { sonidos.reproducir(it) }
             resultado = null
         } else {
-            // Coordenadas normalizadas -> píxeles, para que el ángulo no se distorsione
             val puntos = p.puntos.map { Punto(it.x * p.ancho, it.y * p.alto) }
-            val r = evaluador.evaluar(puntos, SystemClock.elapsedRealtime() / 1000.0)
+            val r = evaluador.evaluar(puntos, ahora)
             r.sonido?.let { sonidos.reproducir(it) }
             resultado = r
         }
@@ -177,13 +195,18 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
 
     DisposableEffect(Unit) {
         onDispose {
+            camara[0]?.unbindAll()
             ejecutor.shutdown()
             detector.cerrar()
             sonidos.liberar()
         }
     }
 
-    val colorEsqueleto = resultado?.let { colorPostura(it.postura) } ?: Color.White
+    val colorEsqueleto = if (fase == Fase.CALIBRANDO) {
+        calibracion?.let { if (it.completa) VERDE else ROJO } ?: Color.White
+    } else {
+        resultado?.let { colorPostura(it.postura) } ?: Color.White
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -195,6 +218,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
                 futuro.addListener({
                     try {
                         val proveedor = futuro.get()
+                        camara[0] = proveedor
 
                         val preview = Preview.Builder().build()
                         preview.setSurfaceProvider(vista.surfaceProvider)
@@ -211,10 +235,8 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
                                     val m = Matrix().apply { postRotate(rotacion.toFloat()) }
                                     Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true)
                                 } else bitmap
-                                // El bitmap va SIN espejar al modelo
                                 detector.detectar(derecho, SystemClock.uptimeMillis())
                             } catch (e: Exception) {
-                                // Un fotograma fallido no debe tumbar la app
                                 Log.e("Analisis", "Error en un fotograma: ${e.message}")
                             } finally {
                                 imagen.close()
@@ -244,15 +266,26 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
             modifier = Modifier.fillMaxSize(),
         )
 
-        PanelEstado(
-            reto = reto,
-            resultado = resultado,
-            onRepetir = { evaluador.reiniciar() },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(16.dp),
-        )
+        val modificadorPanel = Modifier
+            .align(Alignment.TopCenter)
+            .statusBarsPadding()
+            .padding(16.dp)
+
+        if (fase == Fase.CALIBRANDO) {
+            PanelCalibracion(
+                estado = calibracion,
+                progreso = progresoCalibracion,
+                modifier = modificadorPanel,
+            )
+        } else {
+            PanelEstado(
+                reto = reto,
+                resultado = resultado,
+                onRepetir = { evaluador.reiniciar() },
+                onVolver = onVolver,
+                modifier = modificadorPanel,
+            )
+        }
 
         errorCamara?.let { mensaje ->
             Text(
@@ -267,25 +300,83 @@ private fun SesionReto(reto: Reto, detector: DetectorPose) {
             )
         }
 
-        Text(
-            text = "FPS: $fps",
-            color = Color.White,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .navigationBarsPadding()
-                .padding(12.dp),
-        )
-
-        Text(
-            text = "Procesado en tu dispositivo · no se guarda ni se envía video",
-            color = Color.White,
-            fontSize = 12.sp,
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(12.dp)
-                .background(Color(0x99000000), RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(onClick = onVolver) { Text("← Ejercicios") }
+                Text("FPS: $fps", color = Color.White)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Procesado en tu dispositivo · no se guarda ni se envía video",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .background(Color(0x99000000), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BarraProgreso(progreso: Float, color: Color) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .background(Color(0x33FFFFFF), RoundedCornerShape(5.dp))
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(progreso.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .background(color, RoundedCornerShape(5.dp))
+        )
+    }
+}
+
+@Composable
+private fun PanelCalibracion(
+    estado: EstadoCalibracion?,
+    progreso: Float,
+    modifier: Modifier = Modifier,
+) {
+    val color = when {
+        estado == null -> Color.White
+        estado.completa -> VERDE
+        else -> ROJO
+    }
+    val mensaje = when {
+        estado == null -> "No te veo. Ubícate frente a la cámara"
+        estado.completa -> "¡Perfecto! Mantente quieto un momento"
+        else -> "Aléjate hasta que se vea tu cuerpo completo. Falta: ${estado.faltantes.joinToString(", ")}"
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0x99000000), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+    ) {
+        Text("Calibración", color = Color.White, fontSize = 14.sp)
+        Text(mensaje, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        BarraProgreso(progreso, color)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Ubica tu teléfono en el suelo o sobre una mesa, aléjate unos 2 metros y asegúrate de tener buena iluminación.",
+            color = Color.White,
+            fontSize = 13.sp,
         )
     }
 }
@@ -295,6 +386,7 @@ private fun PanelEstado(
     reto: Reto,
     resultado: Resultado?,
     onRepetir: () -> Unit,
+    onVolver: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val color = resultado?.let { colorPostura(it.postura) } ?: Color.White
@@ -305,7 +397,6 @@ private fun PanelEstado(
         resultado.postura == Postura.CORRIGIENDO -> "Casi... ajusta tu postura"
         else -> "Ajusta tu postura"
     }
-    val progreso = (resultado?.progreso ?: 0f).coerceIn(0f, 1f)
 
     Column(
         modifier = modifier
@@ -316,21 +407,7 @@ private fun PanelEstado(
         Text(reto.nombre, color = Color.White, fontSize = 14.sp)
         Text(mensaje, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-
-        // Barra de progreso del tiempo sostenido
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .background(Color(0x33FFFFFF), RoundedCornerShape(5.dp))
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth(progreso)
-                    .fillMaxHeight()
-                    .background(color, RoundedCornerShape(5.dp))
-            )
-        }
+        BarraProgreso(resultado?.progreso ?: 0f, color)
 
         resultado?.criterios?.forEachIndexed { i, c ->
             Text(
@@ -342,7 +419,10 @@ private fun PanelEstado(
 
         if (resultado?.estado == EstadoReto.EXITO) {
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onRepetir) { Text("Repetir") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRepetir) { Text("Repetir") }
+                Button(onClick = onVolver) { Text("Volver al Menú") }
+            }
         }
     }
 }
@@ -360,7 +440,7 @@ private fun EsqueletoOverlay(
         val offX = (size.width - p.ancho * escala) / 2f
         val offY = (size.height - p.alto * escala) / 2f
         val puntos = p.puntos.map { pt ->
-            val x = if (espejar) 1f - pt.x else pt.x   // espejo solo en el dibujo
+            val x = if (espejar) 1f - pt.x else pt.x
             Offset(offX + x * p.ancho * escala, offY + pt.y * p.alto * escala)
         }
         PoseLandmarker.POSE_LANDMARKS.forEach { c ->
