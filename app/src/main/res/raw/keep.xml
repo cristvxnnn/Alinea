@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Evita que el optimizador elimine las imágenes de poses, que se buscan por nombre. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/pose_*" />

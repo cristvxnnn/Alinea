@@ -43,6 +43,9 @@ object CatalogoRetos {
                     tiempoObjetivo = o.getDouble("hold_time_seconds"),
                     categoria = o.optString("categoria", "General"),
                     instrucciones = o.optString("instrucciones", ""),
+                    imagen = o.optString("imagen", "").ifBlank { null },
+                    pasos = o.optJSONArray("pasos")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                        ?: emptyList(),
                 )
             )
         }

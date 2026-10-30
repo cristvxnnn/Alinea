@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PROVISIONAL: figura de palitos. Para sustituirla, borra este XML y agrega una imagen definitiva
+     (PNG, WebP o vector) con el mismo nombre en res/drawable. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="200dp"
+    android:viewportWidth="160"
+    android:viewportHeight="200">
+    <path android:pathData="M66,28 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" android:strokeColor="#1A73E8" android:strokeWidth="6" />
+    <path android:pathData="M64,58 L96,58 M80,42 L80,112 M64,58 L30,16 M96,58 L130,16 M80,112 L40,182 M80,112 L120,182" android:strokeColor="#1A73E8" android:strokeWidth="6" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

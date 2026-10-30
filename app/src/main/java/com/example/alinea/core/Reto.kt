@@ -12,6 +12,8 @@ data class Reto(
     val tiempoObjetivo: Double,
     val categoria: String = "General",
     val instrucciones: String = "",
+    val imagen: String? = null,
+    val pasos: List<String> = emptyList(),
 )
 val INDICE_LANDMARK = mapOf(
     "NOSE" to 0,

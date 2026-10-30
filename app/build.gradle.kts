@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -37,6 +38,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.compose.material:material-icons-core")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -55,7 +57,10 @@ dependencies {
     // MediaPipe Tasks Vision
     implementation("com.google.mediapipe:tasks-vision:1.0.0")
     implementation(libs.androidx.navigation.compose)
-
+    // Room (historial de progreso)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     // CameraX
     val cameraxVersion = "1.6.2"
     implementation("androidx.camera:camera-core:$cameraxVersion")

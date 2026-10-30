@@ -52,6 +52,13 @@ import com.example.alinea.vision.DetectorPose
 import com.example.alinea.vision.PoseFrame
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import java.util.concurrent.Executors
+import androidx.compose.foundation.border
+import com.example.alinea.audio.Voz
+import kotlin.math.ceil
+import com.example.alinea.data.AppDatabase
+import com.example.alinea.data.ProgresoAlcance
+import com.example.alinea.data.ProgresoRepositorio
+import com.example.alinea.data.RegistroSesion
 
 // Colores de alto contraste (verde neón / amarillo / rojo brillante)
 private val VERDE = Color(0xFF39FF14)
@@ -144,18 +151,36 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     val evaluador = remember(reto) { EvaluadorReto(reto) }
     val calibrador = remember { Calibrador() }
     val sonidos = remember { Sonidos() }
+    val voz = remember { Voz(contexto) }
+    val registro = remember {
+        RegistroSesion(
+            ProgresoRepositorio(AppDatabase.obtener(contexto).progresoDao()),
+            ProgresoAlcance.alcance,
+        )
+    }
+    val intento = remember { SeguimientoIntento() }
     val camara = remember { arrayOfNulls<ProcessCameraProvider>(1) }
     val pose by detector.pose.collectAsState()
 
     var fase by remember { mutableStateOf(Fase.CALIBRANDO) }
     var calibracion by remember { mutableStateOf<EstadoCalibracion?>(null) }
-    var progresoCalibracion by remember { mutableFloatStateOf(0f) }
+    var progresoCalibracion by remember { mutableStateOf(0f) }
     var resultado by remember { mutableStateOf<Resultado?>(null) }
+    var estadoAnterior by remember { mutableStateOf<EstadoReto?>(null) }
     var errorCamara by remember { mutableStateOf<String?>(null) }
+    var vozActiva by remember { mutableStateOf(true) }
+    var modoTecnico by remember { mutableStateOf(false) }
 
-    val medida = remember { LongArray(2) }
-    var fps by remember { mutableIntStateOf(0) }
+    // Medición temporal de FPS (RNF-02)
+    val medida = remember { LongArray(2) }   // [0] inicio de ventana (ms), [1] cuadros
+    var fps by remember { mutableStateOf(0) }
 
+    LaunchedEffect(vozActiva) {
+        voz.activada = vozActiva
+        if (!vozActiva) voz.callar()
+    }
+
+    // Cada vez que llega una pose nueva: calibrar o evaluar, sonar, hablar y actualizar la UI
     LaunchedEffect(pose) {
         val t = SystemClock.elapsedRealtime()
         val ahora = t / 1000.0
@@ -172,33 +197,63 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             if (p == null) {
                 calibracion = null
                 progresoCalibracion = calibrador.actualizar(false, ahora)
+                voz.decir("No te veo. Ubícate frente a la cámara", enfriamientoMs = 6000)
             } else {
                 val estado = evaluarSilueta(p.puntos, p.visibilidad)
                 calibracion = estado
                 val yaEstabaListo = calibrador.listo
                 progresoCalibracion = calibrador.actualizar(estado.completa, ahora)
+                if (!estado.completa) {
+                    voz.decir(
+                        "Aléjate un poco. No veo: ${estado.faltantes.joinToString(", ")}",
+                        enfriamientoMs = 6000,
+                    )
+                }
                 if (!yaEstabaListo && calibrador.listo) {
                     sonidos.reproducir(Sonido.LISTO)
+                    voz.decir("Listo. Comenzamos", urgente = true)
                     fase = Fase.RETO
                 }
             }
         } else if (p == null) {
             evaluador.perderCuerpo()?.let { sonidos.reproducir(it) }
+            voz.decir("No te veo. Ubícate frente a la cámara", enfriamientoMs = 6000)
+            if (evaluador.estado != EstadoReto.EXITO) estadoAnterior = null
             resultado = null
         } else {
+            // Coordenadas normalizadas -> píxeles, para que el ángulo no se distorsione
             val puntos = p.puntos.map { Punto(it.x * p.ancho, it.y * p.alto) }
             val r = evaluador.evaluar(puntos, ahora)
+            if (intento.alEvaluar(r.estado, r.progreso * reto.tiempoObjetivo)) {
+                registro.registrar(reto.id, reto.tiempoObjetivo, reto.tiempoObjetivo, EstadoEjercicio.COMPLETADO)
+            }
             r.sonido?.let { sonidos.reproducir(it) }
+            when {
+                r.estado == EstadoReto.EXITO && estadoAnterior != EstadoReto.EXITO ->
+                    voz.decir("¡Lo lograste!", urgente = true)
+                r.estado == EstadoReto.SOSTENIENDO && estadoAnterior != EstadoReto.SOSTENIENDO ->
+                    voz.decir("Así, sostén la pose", urgente = true)
+                r.estado == EstadoReto.ANALIZANDO && r.postura == Postura.CORRIGIENDO ->
+                    voz.decir("Casi, ajusta un poco")
+                r.estado == EstadoReto.ANALIZANDO && r.postura == Postura.INCORRECTO ->
+                    voz.decir("Ajusta tu postura")
+            }
+            estadoAnterior = r.estado
             resultado = r
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            camara[0]?.unbindAll()
+            intento.segundosInterrumpidos()?.let { seg ->
+                registro.registrar(reto.id, reto.tiempoObjetivo, seg, EstadoEjercicio.INTERRUMPIDO)
+            }
+            registro.cerrar(completada = intento.hayExito)
+            camara[0]?.unbindAll()   // apaga la cámara al salir de esta pantalla
             ejecutor.shutdown()
             detector.cerrar()
             sonidos.liberar()
+            voz.liberar()
         }
     }
 
@@ -208,7 +263,12 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
         resultado?.let { colorPostura(it.postura) } ?: Color.White
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Marco de color: se ve de lejos sin leer nada
+            .then(if (fase == Fase.RETO) Modifier.border(10.dp, colorEsqueleto) else Modifier),
+    ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -235,6 +295,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                                     val m = Matrix().apply { postRotate(rotacion.toFloat()) }
                                     Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, true)
                                 } else bitmap
+                                // El bitmap va SIN espejar al modelo
                                 detector.detectar(derecho, SystemClock.uptimeMillis())
                             } catch (e: Exception) {
                                 Log.e("Analisis", "Error en un fotograma: ${e.message}")
@@ -271,20 +332,27 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             .statusBarsPadding()
             .padding(16.dp)
 
-        if (fase == Fase.CALIBRANDO) {
-            PanelCalibracion(
+        when {
+            fase == Fase.CALIBRANDO -> PanelCalibracion(
                 estado = calibracion,
                 progreso = progresoCalibracion,
                 modifier = modificadorPanel,
             )
-        } else {
-            PanelEstado(
+            modoTecnico -> PanelEstado(
                 reto = reto,
                 resultado = resultado,
-                onRepetir = { evaluador.reiniciar() },
+                onRepetir = { evaluador.reiniciar(); intento.reiniciar() },
                 onVolver = onVolver,
                 modifier = modificadorPanel,
             )
+            else -> HudDistancia(reto, resultado, modificadorPanel)
+        }
+
+        if (fase == Fase.RETO && !modoTecnico && resultado?.estado == EstadoReto.EXITO) {
+            Button(
+                onClick = { evaluador.reiniciar(); intento.reiniciar() },
+                modifier = Modifier.align(Alignment.Center).height(64.dp),
+            ) { Text("Repetir", fontSize = 24.sp) }
         }
 
         errorCamara?.let { mensaje ->
@@ -300,6 +368,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             )
         }
 
+        // Zona inferior: controles y aviso de privacidad
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -313,7 +382,18 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(onClick = onVolver) { Text("← Ejercicios") }
-                Text("FPS: $fps", color = Color.White)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (modoTecnico) Text("FPS: $fps", color = Color.White)
+                    Button(onClick = { vozActiva = !vozActiva }) {
+                        Text(if (vozActiva) "Voz: sí" else "Voz: no")
+                    }
+                    Button(onClick = { modoTecnico = !modoTecnico }) {
+                        Text(if (modoTecnico) "Simple" else "Técnico")
+                    }
+                }
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -328,6 +408,50 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     }
 }
 
+/** Indicador para leer a 2 m: número grande + una palabra corta. */
+@Composable
+private fun HudDistancia(reto: Reto, resultado: Resultado?, modifier: Modifier = Modifier) {
+    val color = resultado?.let { colorPostura(it.postura) } ?: Color.White
+    val sosteniendo = resultado?.estado == EstadoReto.SOSTENIENDO
+    val exito = resultado?.estado == EstadoReto.EXITO
+
+    val grande = when {
+        exito -> "✓"
+        sosteniendo -> {
+            val restante = ceil(reto.tiempoObjetivo * (1.0 - (resultado?.progreso ?: 0f))).toInt()
+            restante.coerceAtLeast(1).toString()
+        }
+        resultado == null -> "?"
+        else -> "✕"
+    }
+    val palabra = when {
+        exito -> "¡LOGRADO!"
+        sosteniendo -> "¡SOSTÉN!"
+        resultado == null -> "UBÍCATE"
+        resultado.postura == Postura.CORRIGIENDO -> "CASI"
+        else -> "AJUSTA"
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xCC000000), RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(grande, color = color, fontSize = 80.sp, lineHeight = 88.sp, fontWeight = FontWeight.Black)
+            Column {
+                Text(palabra, color = color, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                Text(reto.nombre, color = Color.White, fontSize = 14.sp)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        BarraProgreso(resultado?.progreso ?: 0f, color)
+    }
+}
 @Composable
 private fun BarraProgreso(progreso: Float, color: Color) {
     Box(
@@ -356,20 +480,25 @@ private fun PanelCalibracion(
         estado.completa -> VERDE
         else -> ROJO
     }
-    val mensaje = when {
-        estado == null -> "No te veo. Ubícate frente a la cámara"
-        estado.completa -> "¡Perfecto! Mantente quieto un momento"
-        else -> "Aléjate hasta que se vea tu cuerpo completo. Falta: ${estado.faltantes.joinToString(", ")}"
+    val palabra = when {
+        estado == null -> "UBÍCATE"
+        estado.completa -> "¡QUIETO!"
+        else -> "ALÉJATE"
+    }
+    val detalle = when {
+        estado == null -> "No te veo. Ponte frente a la cámara"
+        estado.completa -> "Mantén la posición un momento"
+        else -> "Falta: ${estado.faltantes.joinToString(", ")}"
     }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0x99000000), RoundedCornerShape(16.dp))
+            .background(Color(0xCC000000), RoundedCornerShape(16.dp))
             .padding(16.dp),
     ) {
-        Text("Calibración", color = Color.White, fontSize = 14.sp)
-        Text(mensaje, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(palabra, color = color, fontSize = 44.sp, fontWeight = FontWeight.Black)
+        Text(detalle, color = Color.White, fontSize = 16.sp)
         Spacer(Modifier.height(8.dp))
         BarraProgreso(progreso, color)
         Spacer(Modifier.height(8.dp))
@@ -380,7 +509,6 @@ private fun PanelCalibracion(
         )
     }
 }
-
 @Composable
 private fun PanelEstado(
     reto: Reto,
