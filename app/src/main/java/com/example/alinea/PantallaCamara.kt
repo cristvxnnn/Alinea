@@ -148,7 +148,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     val contexto = LocalContext.current
     val actividad = contexto as ComponentActivity
     val ejecutor = remember { Executors.newSingleThreadExecutor() }
-    val evaluador = remember(reto) { EvaluadorReto(reto) }
+    val evaluador = remember(reto) { EvaluadorReto(reto, graciaSegundos = 0.6) }
     val calibrador = remember { Calibrador() }
     val sonidos = remember { Sonidos() }
     val voz = remember { Voz(contexto) }
@@ -170,6 +170,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     var errorCamara by remember { mutableStateOf<String?>(null) }
     var vozActiva by remember { mutableStateOf(true) }
     var modoTecnico by remember { mutableStateOf(false) }
+    var guiaAbierta by remember { mutableStateOf(false) }
 
     // Medición temporal de FPS (RNF-02)
     val medida = remember { LongArray(2) }   // [0] inicio de ventana (ms), [1] cuadros
@@ -178,6 +179,17 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     LaunchedEffect(vozActiva) {
         voz.activada = vozActiva
         if (!vozActiva) voz.callar()
+    }
+
+    // La guía pausa el intento: el tiempo con la guía abierta no cuenta como tiempo sostenido
+    LaunchedEffect(guiaAbierta) {
+        val ahora = SystemClock.elapsedRealtime() / 1000.0
+        if (guiaAbierta) {
+            evaluador.pausar(ahora)
+            voz.callar()
+        } else {
+            evaluador.reanudar(ahora)
+        }
     }
 
     // Cada vez que llega una pose nueva: calibrar o evaluar, sonar, hablar y actualizar la UI
@@ -192,6 +204,9 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             medida[1] = 0
         }
 
+        // Con la guía abierta no se evalúa, no se guarda nada y no se habla
+        if (guiaAbierta) return@LaunchedEffect
+
         val p = pose
         if (fase == Fase.CALIBRANDO) {
             if (p == null) {
@@ -199,7 +214,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                 progresoCalibracion = calibrador.actualizar(false, ahora)
                 voz.decir("No te veo. Ubícate frente a la cámara", enfriamientoMs = 6000)
             } else {
-                val estado = evaluarSilueta(p.puntos, p.visibilidad)
+                val estado = evaluarSilueta(p.puntos, p.visibilidad, vista = reto.vista)
                 calibracion = estado
                 val yaEstabaListo = calibrador.listo
                 progresoCalibracion = calibrador.actualizar(estado.completa, ahora)
@@ -262,6 +277,9 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     } else {
         resultado?.let { colorPostura(it.postura) } ?: Color.White
     }
+    // Solo en el reto: cada articulación evaluada se pinta según su propio estado
+    val estadoPuntos = if (fase == Fase.RETO) resultado?.let { estadoPorPunto(it.criterios) } else null
+    val estadoHuesos = if (fase == Fase.RETO) resultado?.let { estadoPorHueso(it.criterios) } else null
 
     Box(
         modifier = Modifier
@@ -325,12 +343,19 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             color = colorEsqueleto,
             espejar = true,
             modifier = Modifier.fillMaxSize(),
+            estadoPuntos = estadoPuntos,
+            estadoHuesos = estadoHuesos,
         )
 
         val modificadorPanel = Modifier
             .align(Alignment.TopCenter)
             .statusBarsPadding()
-            .padding(16.dp)
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = if (fase == Fase.RETO) 64.dp else 16.dp,
+                bottom = 16.dp,
+            )
 
         when {
             fase == Fase.CALIBRANDO -> PanelCalibracion(
@@ -346,6 +371,20 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                 modifier = modificadorPanel,
             )
             else -> HudDistancia(reto, resultado, modificadorPanel)
+        }
+
+        if (fase == Fase.RETO) {
+            CapsulaGuia(
+                onClick = { guiaAbierta = true },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 8.dp),
+            )
+        }
+
+        if (guiaAbierta) {
+            GuiaExpandida(reto = reto, onCerrar = { guiaAbierta = false })
         }
 
         if (fase == Fase.RETO && !modoTecnico && resultado?.estado == EstadoReto.EXITO) {
@@ -561,6 +600,8 @@ private fun EsqueletoOverlay(
     color: Color,
     espejar: Boolean,
     modifier: Modifier = Modifier,
+    estadoPuntos: Map<Int, Postura>? = null,
+    estadoHuesos: Map<Pair<Int, Int>, Postura>? = null,
 ) {
     Canvas(modifier = modifier) {
         val p = pose ?: return@Canvas
@@ -571,11 +612,37 @@ private fun EsqueletoOverlay(
             val x = if (espejar) 1f - pt.x else pt.x
             Offset(offX + x * p.ancho * escala, offY + pt.y * p.alto * escala)
         }
-        PoseLandmarker.POSE_LANDMARKS.forEach { c ->
-            if (c.start() < puntos.size && c.end() < puntos.size) {
-                drawLine(color, puntos[c.start()], puntos[c.end()], strokeWidth = 8f)
+        val neutro = Color(0xCCFFFFFF)
+
+        // Sin estados por articulación (calibración o cuerpo perdido): todo del mismo color
+        val porArticulacion = estadoPuntos != null && estadoHuesos != null
+        val colorHueso = { a: Int, b: Int ->
+            if (!porArticulacion) color
+            else estadoHuesos!![minOf(a, b) to maxOf(a, b)]?.let { colorPostura(it) } ?: neutro
+        }
+
+        // Primero los huesos sin evaluar y después los evaluados, para que no queden tapados
+        for (pasada in 0..1) {
+            PoseLandmarker.POSE_LANDMARKS.forEach { c ->
+                val a = c.start()
+                val b = c.end()
+                if (a < puntos.size && b < puntos.size) {
+                    val col = colorHueso(a, b)
+                    val evaluado = porArticulacion && col != neutro
+                    if ((pasada == 1) == evaluado) {
+                        drawLine(col, puntos[a], puntos[b], strokeWidth = if (evaluado) 10f else 6f)
+                    }
+                }
             }
         }
-        puntos.forEach { drawCircle(color, radius = 10f, center = it) }
+        puntos.forEachIndexed { i, punto ->
+            val estado = estadoPuntos?.get(i)
+            val col = when {
+                !porArticulacion -> color
+                estado != null -> colorPostura(estado)
+                else -> neutro
+            }
+            drawCircle(col, radius = if (estado != null) 15f else 9f, center = punto)
+        }
     }
 }

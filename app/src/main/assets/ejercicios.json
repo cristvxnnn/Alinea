@@ -1,6 +1,7 @@
 {
   "estiramiento_brazo_izquierdo": {
     "nombre": "Estiramiento Lateral Izquierdo",
+    "imagen": "estiramiento_brazo_izquierdo",
     "categoria": "Pausas Activas",
     "instrucciones": "Extiende el brazo izquierdo hacia un lado, bien recto, y mantenlo.",
     "criterios": [
@@ -13,6 +14,7 @@
   },
   "estiramiento_brazo_derecho": {
     "nombre": "Estiramiento Lateral Derecho",
+    "imagen": "estiramiento_brazo_derecho",
     "categoria": "Pausas Activas",
     "instrucciones": "Extiende el brazo derecho hacia un lado, bien recto, y mantenlo.",
     "criterios": [
@@ -26,6 +28,7 @@
   "brazos_arriba": {
     "nombre": "Brazos Arriba",
     "categoria": "Pausas Activas",
+    "imagen": "estiramiento_brazos_arriba",
     "instrucciones": "Levanta los dos brazos por encima de la cabeza, rectos, y mantenlos.",
     "criterios": [
       {
@@ -49,6 +52,7 @@
   },
   "sentadilla_isometrica": {
     "nombre": "Sentadilla Isométrica (Wall Sit)",
+    "imagen": "pose_sentadilla_isometrica",
     "categoria": "Fuerza",
     "instrucciones": "Ponte de lado a la cámara, apoya la espalda en la pared y baja hasta que tus rodillas formen unos 90°.",
     "criterios": [
@@ -112,35 +116,117 @@
   },
   "yoga_guerrero_ii_izquierdo": {
     "nombre": "Guerrero II", "categoria": "Yoga Básico",
-    "imagen": "pose_yoga_guerrero_ii_izquierdo",
-    "pasos": ["Abre las piernas con un paso amplio.", "Dobla la rodilla izquierda y mantén recta la pierna derecha.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
     "instrucciones": "Piernas bien abiertas, rodilla izquierda doblada, pierna derecha recta y brazos extendidos a los lados.",
+    "imagen": "pose_yoga_guerrero_ii_izquierdo",
+    "pasos": ["Abre las piernas con un paso amplio y gira el pie izquierdo hacia afuera.", "Dobla la rodilla izquierda y mantén recta la pierna derecha.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
     "criterios": [
-      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [80, 125]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [165, 180]},
-      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [75, 105]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"], "rango_esperado": [75, 105]},
-      {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [160, 180]},
-      {"puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"], "rango_esperado": [160, 180]},
-      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_ANKLE"], "rango_esperado": [110, 160]},
-      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_ANKLE"], "rango_esperado": [110, 160]}
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [75, 130]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [150, 180]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [65, 115]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"], "rango_esperado": [65, 115]},
+      {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [150, 180]},
+      {"puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"], "rango_esperado": [150, 180]},
+      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_ANKLE"], "rango_esperado": [100, 170]},
+      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_ANKLE"], "rango_esperado": [100, 170]}
     ],
-    "hold_time_seconds": 10
+    "hold_time_seconds": 8
   },
   "yoga_guerrero_ii_derecho": {
     "nombre": "Guerrero II (lado derecho)", "categoria": "Yoga Básico",
-    "imagen": "pose_yoga_guerrero_ii_derecho",
-    "pasos": ["Abre las piernas con un paso amplio.", "Dobla la rodilla derecha y mantén recta la pierna izquierda.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
     "instrucciones": "Piernas bien abiertas, rodilla derecha doblada, pierna izquierda recta y brazos extendidos a los lados.",
+    "imagen": "pose_yoga_guerrero_ii_derecho",
+    "pasos": ["Abre las piernas con un paso amplio y gira el pie derecho hacia afuera.", "Dobla la rodilla derecha y mantén recta la pierna izquierda.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
     "criterios": [
-      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [80, 125]},
-      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [165, 180]},
-      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [75, 105]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"], "rango_esperado": [75, 105]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [75, 130]},
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [150, 180]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [65, 115]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"], "rango_esperado": [65, 115]},
+      {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [150, 180]},
+      {"puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"], "rango_esperado": [150, 180]},
+      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_ANKLE"], "rango_esperado": [100, 170]},
+      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_ANKLE"], "rango_esperado": [100, 170]}
+    ],
+    "hold_time_seconds": 8
+  },
+  "yoga_cobra": {
+    "nombre": "Postura de la Cobra", "categoria": "Yoga Básico",
+    "instrucciones": "Boca abajo, levanta el pecho apoyándote en las manos, sin forzar la espalda baja. Se hace de lado a la cámara.",
+    "imagen": "pose_yoga_cobra",
+    "vista": "lateral",
+    "pasos": ["Acuéstate boca abajo, de lado a la cámara y con tu lado izquierdo hacia ella.", "Estira las piernas y apoya las manos bajo los hombros.", "Empuja con las manos y levanta el pecho, con la pelvis en el suelo.", "Mira al frente sin forzar el cuello y sostén respirando con calma."],
+    "criterios": [
+      {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [130, 180]},
+      {"puntos": ["LEFT_SHOULDER", "LEFT_HIP", "LEFT_KNEE"], "rango_esperado": [120, 170]},
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [160, 180]}
+    ],
+    "hold_time_seconds": 8
+  },
+  "yoga_vaca": {
+    "nombre": "Postura de la Vaca", "categoria": "Yoga Básico",
+    "instrucciones": "A cuatro apoyos, deja caer el abdomen y levanta el pecho y la mirada. La app comprueba la base en cuatro apoyos.",
+    "imagen": "pose_yoga_vaca",
+    "vista": "lateral",
+    "pasos": ["Ponte a cuatro apoyos, de lado a la cámara y con tu lado izquierdo hacia ella.", "Coloca las manos bajo los hombros y las rodillas bajo las caderas.", "Deja caer el abdomen y levanta el pecho y la mirada.", "Mantén los brazos estirados y sostén respirando con calma."],
+    "criterios": [
       {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [160, 180]},
-      {"puntos": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"], "rango_esperado": [160, 180]},
-      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_ANKLE"], "rango_esperado": [110, 160]},
-      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_ANKLE"], "rango_esperado": [110, 160]}
+      {"puntos": ["LEFT_SHOULDER", "LEFT_HIP", "LEFT_KNEE"], "rango_esperado": [75, 110]},
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [70, 115]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [70, 110]}
+    ],
+    "hold_time_seconds": 8
+  },
+  "yoga_mariposa": {
+    "nombre": "Postura de la Mariposa", "categoria": "Yoga Básico",
+    "instrucciones": "Sentado con la espalda recta, las plantas de los pies juntas y las rodillas abiertas hacia los lados.",
+    "imagen": "pose_yoga_mariposa",
+    "pasos": ["Siéntate con la espalda recta, de frente a la cámara.", "Junta las plantas de los pies y acércalas al cuerpo.", "Deja que las rodillas caigan hacia los lados, sin forzarlas.", "Mantén la espalda erguida y sostén respirando con calma."],
+    "criterios": [
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [25, 80]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [25, 80]},
+      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_KNEE"], "rango_esperado": [130, 180]},
+      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_KNEE"], "rango_esperado": [130, 180]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]}
+    ],
+    "hold_time_seconds": 10
+  },
+  "yoga_escuadra": {
+    "nombre": "Postura de la Escuadra", "categoria": "Yoga Básico",
+    "instrucciones": "De pie y de lado a la cámara, inclina el tronco hasta formar una L con las piernas rectas y los brazos al frente.",
+    "imagen": "pose_yoga_escuadra",
+    "vista": "lateral",
+    "pasos": ["Ponte de pie, de lado a la cámara y con tu lado izquierdo hacia ella.", "Inclina el tronco hacia delante desde las caderas, hasta formar una L.", "Mantén las piernas rectas, la espalda plana y los brazos estirados al frente.", "Sostén respirando con calma."],
+    "criterios": [
+      {"puntos": ["LEFT_SHOULDER", "LEFT_HIP", "LEFT_KNEE"], "rango_esperado": [70, 115]},
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [165, 180]},
+      {"puntos": ["LEFT_SHOULDER", "LEFT_ELBOW", "LEFT_WRIST"], "rango_esperado": [150, 180]}
+    ],
+    "hold_time_seconds": 8
+  },
+  "cuello_inclinacion_izquierda": {
+    "nombre": "Cabeza hacia el hombro izquierdo", "categoria": "Pausas Activas",
+    "instrucciones": "Con los hombros relajados, lleva la oreja izquierda hacia el hombro izquierdo sin levantarlo.",
+    "imagen": "pose_cuello_inclinacion_izquierda",
+    "vista": "busto",
+    "pasos": ["Siéntate o ponte de pie, de frente a la cámara, con la espalda recta.", "Deja los hombros relajados y a la misma altura.", "Lleva la oreja izquierda hacia el hombro izquierdo, sin levantar el hombro.", "Sostén sin forzar el cuello."],
+    "criterios": [
+      {"puntos": ["LEFT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [75, 140]},
+      {"puntos": ["RIGHT_EAR", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [15, 45]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [65, 100]}
+    ],
+    "hold_time_seconds": 10
+  },
+  "cuello_inclinacion_derecha": {
+    "nombre": "Cabeza hacia el hombro derecho", "categoria": "Pausas Activas",
+    "instrucciones": "Con los hombros relajados, lleva la oreja derecha hacia el hombro derecho sin levantarlo.",
+    "imagen": "pose_cuello_inclinacion_derecha",
+    "vista": "busto",
+    "pasos": ["Siéntate o ponte de pie, de frente a la cámara, con la espalda recta.", "Deja los hombros relajados y a la misma altura.", "Lleva la oreja derecha hacia el hombro derecho, sin levantar el hombro.", "Sostén sin forzar el cuello."],
+    "criterios": [
+      {"puntos": ["RIGHT_EAR", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [75, 140]},
+      {"puntos": ["LEFT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [15, 45]},
+      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [65, 100]}
     ],
     "hold_time_seconds": 10
   }

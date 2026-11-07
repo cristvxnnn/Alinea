@@ -5,7 +5,7 @@ import com.example.alinea.core.Criterio
 import com.example.alinea.core.INDICE_LANDMARK
 import com.example.alinea.core.Reto
 import org.json.JSONObject
-
+import com.example.alinea.core.VistaCalibracion
 object CatalogoRetos {
 
     fun cargar(context: Context): List<Reto> {
@@ -46,6 +46,7 @@ object CatalogoRetos {
                     imagen = o.optString("imagen", "").ifBlank { null },
                     pasos = o.optJSONArray("pasos")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
                         ?: emptyList(),
+                    vista = VistaCalibracion.desdeTexto(o.optString("vista", "")),
                 )
             )
         }

@@ -5,6 +5,7 @@ data class Criterio(
     val rangoMin: Double,
     val rangoMax: Double,
 )
+
 data class Reto(
     val id: String,
     val nombre: String,
@@ -14,6 +15,7 @@ data class Reto(
     val instrucciones: String = "",
     val imagen: String? = null,
     val pasos: List<String> = emptyList(),
+    val vista: VistaCalibracion = VistaCalibracion.COMPLETA,
 )
 val INDICE_LANDMARK = mapOf(
     "NOSE" to 0,
@@ -33,3 +35,15 @@ val INDICE_LANDMARK = mapOf(
     "LEFT_HEEL" to 29, "RIGHT_HEEL" to 30,
     "LEFT_FOOT_INDEX" to 31, "RIGHT_FOOT_INDEX" to 32,
 )
+
+enum class VistaCalibracion {
+    COMPLETA,   // cuerpo entero, de frente
+    LATERAL,    // de lado, con el lado izquierdo hacia la cámara
+    BUSTO;      // solo cabeza y hombros (ejercicios de cuello, incluso sentado)
+
+    companion object {
+        fun desdeTexto(texto: String?): VistaCalibracion =
+            entries.firstOrNull { it.name.equals(texto?.trim(), ignoreCase = true) } ?: COMPLETA
+    }
+}
+

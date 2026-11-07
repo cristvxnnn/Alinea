@@ -118,7 +118,7 @@ private fun ContenidoPreparacion(reto: Reto, onComenzar: () -> Unit, onVolver: (
 }
 
 @Composable
-private fun Paso(numero: Int, texto: String) {
+fun Paso(numero: Int, texto: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         Box(
             Modifier.size(28.dp).background(MaterialTheme.colorScheme.primary, CircleShape),

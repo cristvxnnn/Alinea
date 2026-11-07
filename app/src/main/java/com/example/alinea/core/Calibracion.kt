@@ -1,6 +1,6 @@
 package com.example.alinea.core
 
-private val GRUPOS = linkedMapOf(
+private val GRUPOS_COMPLETA = linkedMapOf(
     "cabeza" to listOf(0),
     "hombros" to listOf(11, 12),
     "caderas" to listOf(23, 24),
@@ -8,16 +8,42 @@ private val GRUPOS = linkedMapOf(
     "pies" to listOf(27, 28, 31, 32),
 )
 
+// De lado solo se exige el lado izquierdo (el más cercano a la cámara)
+private val GRUPOS_LATERAL = linkedMapOf(
+    "cabeza" to listOf(0),
+    "hombro" to listOf(11),
+    "cadera" to listOf(23),
+    "rodilla" to listOf(25),
+    "pie" to listOf(27, 31),
+)
+
+private val GRUPOS_BUSTO = linkedMapOf(
+    "cabeza" to listOf(0),
+    "orejas" to listOf(7, 8),
+    "hombros" to listOf(11, 12),
+)
+
+private fun gruposDe(vista: VistaCalibracion) = when (vista) {
+    VistaCalibracion.COMPLETA -> GRUPOS_COMPLETA
+    VistaCalibracion.LATERAL -> GRUPOS_LATERAL
+    VistaCalibracion.BUSTO -> GRUPOS_BUSTO
+}
+
 data class EstadoCalibracion(val completa: Boolean, val faltantes: List<String>)
 
+/**
+ * puntos: landmarks NORMALIZADOS (0..1). visibilidad: probabilidad de cada landmark (0..1).
+ * Un grupo "falta" si algún landmark es poco visible o está fuera del encuadre.
+ */
 fun evaluarSilueta(
     puntos: List<Punto>,
     visibilidad: List<Float>,
     minVisibilidad: Float = 0.5f,
     margen: Float = 0.02f,
+    vista: VistaCalibracion = VistaCalibracion.COMPLETA,
 ): EstadoCalibracion {
     require(puntos.size >= 33 && visibilidad.size >= 33) { "Se esperan 33 landmarks" }
-    val faltantes = GRUPOS.filter { (_, indices) ->
+    val faltantes = gruposDe(vista).filter { (_, indices) ->
         indices.any { i ->
             val p = puntos[i]
             visibilidad[i] < minVisibilidad ||
