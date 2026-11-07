@@ -28,6 +28,8 @@ private fun gruposDe(vista: VistaCalibracion) = when (vista) {
     VistaCalibracion.LATERAL -> GRUPOS_LATERAL
     VistaCalibracion.BUSTO -> GRUPOS_BUSTO
 }
+/** Nombres de las partes del cuerpo que exige cada vista, para la lista de verificación. */
+fun gruposRequeridos(vista: VistaCalibracion): List<String> = gruposDe(vista).keys.toList()
 
 data class EstadoCalibracion(val completa: Boolean, val faltantes: List<String>)
 

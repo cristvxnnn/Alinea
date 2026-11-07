@@ -19,51 +19,74 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.alinea.audio.Sonidos
-import com.example.alinea.core.*
-import com.example.alinea.data.CatalogoRetos
-import com.example.alinea.vision.DetectorPose
-import com.example.alinea.vision.PoseFrame
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
-import java.util.concurrent.Executors
-import androidx.compose.foundation.border
 import com.example.alinea.audio.Voz
-import kotlin.math.ceil
+import com.example.alinea.core.*
 import com.example.alinea.data.AppDatabase
 import com.example.alinea.data.ProgresoAlcance
 import com.example.alinea.data.ProgresoRepositorio
 import com.example.alinea.data.RegistroSesion
+import com.example.alinea.vision.DetectorPose
+import com.example.alinea.vision.PoseFrame
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
+import java.util.concurrent.Executors
+import kotlin.math.ceil
 
-// Colores de alto contraste (verde neón / amarillo / rojo brillante)
+// Semáforo de alto contraste (verde neón / amarillo / rojo brillante)
 private val VERDE = Color(0xFF39FF14)
 private val AMARILLO = Color(0xFFFFEB00)
 private val ROJO = Color(0xFFFF1744)
+
+// Identidad "Aurora": vidrio oscuro con luces azul, cian y violeta
+private val CIAN = Color(0xFF22D3EE)
+private val CRISTAL_BASE = Color(0xB30A1A33)
+private val TEXTO_SUAVE = Color(0xCCFFFFFF)
+private val FONDO_CAMARA = Color(0xFF0A1A33)
 
 private enum class Fase { CALIBRANDO, RETO }
 
@@ -72,6 +95,13 @@ private fun colorPostura(p: Postura) = when (p) {
     Postura.CORRIGIENDO -> AMARILLO
     Postura.INCORRECTO -> ROJO
 }
+
+/** Efecto vidrio: base azul oscura translúcida, brillo diagonal y borde de luz. */
+private fun Modifier.cristal(forma: Shape = RoundedCornerShape(28.dp)): Modifier = this
+    .clip(forma)
+    .background(CRISTAL_BASE)
+    .background(Brush.linearGradient(listOf(Color(0x26FFFFFF), Color(0x08FFFFFF))))
+    .border(1.dp, Brush.linearGradient(listOf(Color(0x66FFFFFF), Color(0x1AFFFFFF))), forma)
 
 @Composable
 fun PantallaCamara(reto: Reto?, onVolver: () -> Unit) {
@@ -220,7 +250,7 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                 progresoCalibracion = calibrador.actualizar(estado.completa, ahora)
                 if (!estado.completa) {
                     voz.decir(
-                        "Aléjate un poco. No veo: ${estado.faltantes.joinToString(", ")}",
+                        "Ajusta tu posición. No veo: ${estado.faltantes.joinToString(", ")}",
                         enfriamientoMs = 6000,
                     )
                 }
@@ -280,18 +310,24 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
     // Solo en el reto: cada articulación evaluada se pinta según su propio estado
     val estadoPuntos = if (fase == Fase.RETO) resultado?.let { estadoPorPunto(it.criterios) } else null
     val estadoHuesos = if (fase == Fase.RETO) resultado?.let { estadoPorHueso(it.criterios) } else null
+    val mostrarExito = fase == Fase.RETO && !modoTecnico && resultado?.estado == EstadoReto.EXITO
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Marco de color: se ve de lejos sin leer nada
-            .then(if (fase == Fase.RETO) Modifier.border(10.dp, colorEsqueleto) else Modifier),
+            .background(FONDO_CAMARA)
+            // Marco de color redondeado: se ve de lejos sin leer nada
+            .then(
+                if (fase == Fase.RETO) Modifier.border(8.dp, colorEsqueleto, RoundedCornerShape(36.dp))
+                else Modifier
+            ),
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 val vista = PreviewView(ctx)
                 vista.scaleType = PreviewView.ScaleType.FIT_CENTER
+                vista.setBackgroundColor(0xFF0A1A33.toInt())   // las franjas laterales no quedan negras
                 val futuro = ProcessCameraProvider.getInstance(ctx)
                 futuro.addListener({
                     try {
@@ -338,6 +374,22 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             },
         )
 
+        // Viñetas: dan profundidad y aseguran el contraste de los paneles sobre cualquier fondo
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(260.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xCC061226), Color.Transparent)))
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(220.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC061226))))
+        )
+
         EsqueletoOverlay(
             pose = pose,
             color = colorEsqueleto,
@@ -347,63 +399,32 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
             estadoHuesos = estadoHuesos,
         )
 
-        val modificadorPanel = Modifier
-            .align(Alignment.TopCenter)
-            .statusBarsPadding()
-            .padding(
-                start = 16.dp,
-                end = 16.dp,
-                top = if (fase == Fase.RETO) 64.dp else 16.dp,
-                bottom = 16.dp,
-            )
-
+        val zonaSuperior = Modifier.align(Alignment.TopCenter).statusBarsPadding()
         when {
             fase == Fase.CALIBRANDO -> PanelCalibracion(
                 estado = calibracion,
                 progreso = progresoCalibracion,
-                modifier = modificadorPanel,
+                vista = reto.vista,
+                modifier = zonaSuperior.padding(16.dp),
             )
-            modoTecnico -> PanelEstado(
+            modoTecnico -> PanelTecnico(
                 reto = reto,
                 resultado = resultado,
                 onRepetir = { evaluador.reiniciar(); intento.reiniciar() },
                 onVolver = onVolver,
-                modifier = modificadorPanel,
+                modifier = zonaSuperior.padding(start = 16.dp, end = 16.dp, top = 64.dp),
             )
-            else -> HudDistancia(reto, resultado, modificadorPanel)
+            else -> HudDistancia(
+                reto = reto,
+                resultado = resultado,
+                modifier = zonaSuperior.padding(start = 16.dp, end = 16.dp, top = 64.dp),
+            )
         }
 
         if (fase == Fase.RETO) {
             CapsulaGuia(
                 onClick = { guiaAbierta = true },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(top = 8.dp),
-            )
-        }
-
-        if (guiaAbierta) {
-            GuiaExpandida(reto = reto, onCerrar = { guiaAbierta = false })
-        }
-
-        if (fase == Fase.RETO && !modoTecnico && resultado?.estado == EstadoReto.EXITO) {
-            Button(
-                onClick = { evaluador.reiniciar(); intento.reiniciar() },
-                modifier = Modifier.align(Alignment.Center).height(64.dp),
-            ) { Text("Repetir", fontSize = 24.sp) }
-        }
-
-        errorCamara?.let { mensaje ->
-            Text(
-                text = mensaje,
-                color = Color.White,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(24.dp)
-                    .background(Color(0xCC000000), RoundedCornerShape(12.dp))
-                    .padding(16.dp),
+                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 8.dp),
             )
         }
 
@@ -415,34 +436,249 @@ private fun SesionReto(reto: Reto, detector: DetectorPose, onVolver: () -> Unit)
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(onClick = onVolver) { Text("← Ejercicios") }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (modoTecnico) Text("FPS: $fps", color = Color.White)
-                    Button(onClick = { vozActiva = !vozActiva }) {
-                        Text(if (vozActiva) "Voz: sí" else "Voz: no")
-                    }
-                    Button(onClick = { modoTecnico = !modoTecnico }) {
-                        Text(if (modoTecnico) "Simple" else "Técnico")
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Procesado en tu dispositivo · no se guarda ni se envía video",
-                color = Color.White,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .background(Color(0x99000000), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            DockControles(
+                onVolver = onVolver,
+                vozActiva = vozActiva,
+                onVoz = { vozActiva = !vozActiva },
+                modoTecnico = modoTecnico,
+                onTecnico = { modoTecnico = !modoTecnico },
+                fps = fps,
             )
+            Spacer(Modifier.height(8.dp))
+            AvisoPrivacidad()
+        }
+
+        if (mostrarExito) {
+            TarjetaExito(
+                nombre = reto.nombre,
+                onRepetir = { evaluador.reiniciar(); intento.reiniciar() },
+                onVolver = onVolver,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        if (guiaAbierta) {
+            GuiaExpandida(reto = reto, onCerrar = { guiaAbierta = false })
+        }
+
+        errorCamara?.let { mensaje ->
+            AvisoCamara(mensaje, Modifier.align(Alignment.Center).padding(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun BotonCristal(
+    texto: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icono: ImageVector? = null,
+    activo: Boolean? = null,      // null = botón normal; true/false = interruptor con punto
+    plano: Boolean = false,       // plano: para usarlo dentro de otro panel de vidrio
+) {
+    val forma = RoundedCornerShape(50)
+    Row(
+        modifier = modifier
+            .heightIn(min = 44.dp)
+            .clip(forma)
+            .then(if (plano) Modifier.background(Color(0x1FFFFFFF)) else Modifier.cristal(forma))
+            .then(if (activo == true) Modifier.border(1.5.dp, CIAN, forma) else Modifier)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (icono != null) {
+            Icon(icono, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        }
+        if (activo != null) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(if (activo) CIAN else Color(0x66FFFFFF), CircleShape)
+            )
+        }
+        Text(texto, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun BotonPrimario(
+    texto: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icono: ImageVector? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White)
+            .clickable(role = Role.Button, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icono != null) {
+            Icon(icono, contentDescription = null, tint = FONDO_CAMARA, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.size(8.dp))
+        }
+        Text(texto, color = FONDO_CAMARA, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Barra con relleno degradado y una marca por segundo (si hay entre 2 y 12 segundos). */
+@Composable
+private fun BarraCristal(
+    progreso: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+    segmentos: Int = 0,
+) {
+    Canvas(modifier.fillMaxWidth().height(14.dp)) {
+        val radio = CornerRadius(size.height / 2, size.height / 2)
+        drawRoundRect(Color(0x33FFFFFF), size = size, cornerRadius = radio)
+        val ancho = size.width * progreso.coerceIn(0f, 1f)
+        if (ancho > 0f) {
+            drawRoundRect(
+                Brush.horizontalGradient(listOf(color.copy(alpha = 0.7f), color)),
+                size = Size(maxOf(ancho, size.height), size.height),
+                cornerRadius = radio,
+            )
+        }
+        if (segmentos in 2..12) {
+            for (k in 1 until segmentos) {
+                val x = size.width * k / segmentos
+                drawLine(Color(0xB30A1A33), Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+            }
+        }
+    }
+}
+
+/** estado: true = correcto, false = falta, null = pendiente. */
+@Composable
+private fun ChipEstado(texto: String, estado: Boolean?, modifier: Modifier = Modifier) {
+    val fondo = when (estado) {
+        true -> Color(0x2439FF14)
+        false -> Color(0x2EFF1744)
+        null -> Color(0x1AFFFFFF)
+    }
+    val borde = when (estado) {
+        true -> Color(0x8039FF14)
+        false -> Color(0x99FF1744)
+        null -> Color(0x33FFFFFF)
+    }
+    val contenido = when (estado) {
+        true -> Color(0xFFB8FFA8)
+        false -> Color(0xFFFF9DB0)
+        null -> TEXTO_SUAVE
+    }
+    val forma = RoundedCornerShape(50)
+    Row(
+        modifier = modifier
+            .clip(forma)
+            .background(fondo)
+            .border(1.dp, borde, forma)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        when (estado) {
+            true -> Icon(Icons.Default.Check, null, tint = contenido, modifier = Modifier.size(12.dp))
+            false -> Icon(Icons.Default.Close, null, tint = contenido, modifier = Modifier.size(12.dp))
+            null -> {}
+        }
+        Text(texto, color = contenido, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun DockControles(
+    onVolver: () -> Unit,
+    vozActiva: Boolean,
+    onVoz: () -> Unit,
+    modoTecnico: Boolean,
+    onTecnico: () -> Unit,
+    fps: Int,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .cristal(RoundedCornerShape(32.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BotonCristal("Ejercicios", onVolver, icono = Icons.AutoMirrored.Filled.ArrowBack, plano = true)
+        if (modoTecnico) {
+            Text("$fps FPS", color = TEXTO_SUAVE, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BotonCristal("Voz", onVoz, activo = vozActiva, plano = true)
+            BotonCristal("Técnico", onTecnico, activo = modoTecnico, plano = true)
+        }
+    }
+}
+
+@Composable
+private fun AvisoPrivacidad() {
+    val forma = RoundedCornerShape(50)
+    Row(
+        modifier = Modifier
+            .clip(forma)
+            .background(Color(0x990A1A33))
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(Icons.Default.Lock, null, tint = TEXTO_SUAVE, modifier = Modifier.size(12.dp))
+        Text(
+            "Procesado en tu dispositivo",
+            color = TEXTO_SUAVE,
+            fontSize = 11.sp,
+        )
+    }
+}
+
+@Composable
+private fun AvisoCamara(mensaje: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.cristal().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Default.Warning, null, tint = AMARILLO, modifier = Modifier.size(24.dp))
+        Text(mensaje, color = Color.White, fontSize = 15.sp)
+    }
+}
+
+@Composable
+private fun TarjetaExito(
+    nombre: String,
+    onRepetir: () -> Unit,
+    onVolver: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.background(Color(0x80061226)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(32.dp).cristal().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(88.dp).background(Color(0xFF2BD97C), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Check, null, tint = FONDO_CAMARA, modifier = Modifier.size(52.dp))
+            }
+            Text("¡LOGRADO!", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+            Text(nombre, color = TEXTO_SUAVE, fontSize = 15.sp)
+            Spacer(Modifier.height(4.dp))
+            BotonPrimario("Repetir", onRepetir, icono = Icons.Default.Refresh)
+            BotonCristal("Volver a la lista", onVolver, modifier = Modifier.fillMaxWidth().height(52.dp))
         }
     }
 }
@@ -470,12 +706,12 @@ private fun HudDistancia(reto: Reto, resultado: Resultado?, modifier: Modifier =
         resultado.postura == Postura.CORRIGIENDO -> "CASI"
         else -> "AJUSTA"
     }
+    val bien = resultado?.criterios?.count { it.postura == Postura.APROBADO }
+    val total = resultado?.criterios?.size
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0xCC000000), RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().cristal().padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -484,27 +720,13 @@ private fun HudDistancia(reto: Reto, resultado: Resultado?, modifier: Modifier =
             Text(grande, color = color, fontSize = 80.sp, lineHeight = 88.sp, fontWeight = FontWeight.Black)
             Column {
                 Text(palabra, color = color, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                Text(reto.nombre, color = Color.White, fontSize = 14.sp)
+                Text(reto.nombre, color = TEXTO_SUAVE, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        BarraProgreso(resultado?.progreso ?: 0f, color)
-    }
-}
-@Composable
-private fun BarraProgreso(progreso: Float, color: Color) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(10.dp)
-            .background(Color(0x33FFFFFF), RoundedCornerShape(5.dp))
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth(progreso.coerceIn(0f, 1f))
-                .fillMaxHeight()
-                .background(color, RoundedCornerShape(5.dp))
-        )
+        BarraCristal(resultado?.progreso ?: 0f, color, segmentos = reto.tiempoObjetivo.toInt())
+        if (bien != null && total != null) {
+            ChipEstado("$bien/$total articulaciones correctas", if (bien == total) true else null)
+        }
     }
 }
 
@@ -512,6 +734,7 @@ private fun BarraProgreso(progreso: Float, color: Color) {
 private fun PanelCalibracion(
     estado: EstadoCalibracion?,
     progreso: Float,
+    vista: VistaCalibracion,
     modifier: Modifier = Modifier,
 ) {
     val color = when {
@@ -522,34 +745,51 @@ private fun PanelCalibracion(
     val palabra = when {
         estado == null -> "UBÍCATE"
         estado.completa -> "¡QUIETO!"
-        else -> "ALÉJATE"
+        vista == VistaCalibracion.COMPLETA -> "ALÉJATE"
+        else -> "AJUSTA"
     }
     val detalle = when {
         estado == null -> "No te veo. Ponte frente a la cámara"
         estado.completa -> "Mantén la posición un momento"
         else -> "Falta: ${estado.faltantes.joinToString(", ")}"
     }
+    val ayuda = when (vista) {
+        VistaCalibracion.COMPLETA ->
+            "Ubica tu teléfono en el suelo o sobre una mesa, aléjate unos 2 metros y asegúrate de tener buena iluminación."
+        VistaCalibracion.LATERAL ->
+            "Colócate de lado, con tu lado izquierdo hacia la cámara, y aléjate hasta que se vea todo tu cuerpo."
+        VistaCalibracion.BUSTO ->
+            "Colócate de frente: tu cabeza, tus orejas y tus hombros deben verse completos."
+    }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0xCC000000), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+        modifier = modifier.fillMaxWidth().cristal().padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        Text("CALIBRACIÓN", color = CIAN, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         Text(palabra, color = color, fontSize = 44.sp, fontWeight = FontWeight.Black)
-        Text(detalle, color = Color.White, fontSize = 16.sp)
-        Spacer(Modifier.height(8.dp))
-        BarraProgreso(progreso, color)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Ubica tu teléfono en el suelo o sobre una mesa, aléjate unos 2 metros y asegúrate de tener buena iluminación.",
-            color = Color.White,
-            fontSize = 13.sp,
-        )
+        Text(detalle, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+
+        // Lista de verificación: qué partes del cuerpo ya se ven
+        gruposRequeridos(vista).chunked(3).forEach { fila ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                fila.forEach { nombre ->
+                    ChipEstado(
+                        texto = nombre.replaceFirstChar { it.uppercase() },
+                        estado = if (estado == null) null else nombre !in estado.faltantes,
+                    )
+                }
+            }
+        }
+
+        BarraCristal(progreso, color)
+        Text(ayuda, color = TEXTO_SUAVE, fontSize = 13.sp)
     }
 }
+
+/** Modo técnico: ángulo de cada criterio, en el mismo orden que en ejercicios.json. */
 @Composable
-private fun PanelEstado(
+private fun PanelTecnico(
     reto: Reto,
     resultado: Resultado?,
     onRepetir: () -> Unit,
@@ -566,29 +806,26 @@ private fun PanelEstado(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0x99000000), RoundedCornerShape(16.dp))
-            .padding(16.dp),
+        modifier = modifier.fillMaxWidth().cristal().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(reto.nombre, color = Color.White, fontSize = 14.sp)
+        Text(reto.nombre, color = TEXTO_SUAVE, fontSize = 13.sp)
         Text(mensaje, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        BarraProgreso(resultado?.progreso ?: 0f, color)
-
+        BarraCristal(resultado?.progreso ?: 0f, color, segmentos = reto.tiempoObjetivo.toInt())
         resultado?.criterios?.forEachIndexed { i, c ->
-            Text(
-                "Criterio ${i + 1}: ${c.angulo.toInt()}°",
-                color = colorPostura(c.postura),
-                fontSize = 14.sp,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(8.dp).background(colorPostura(c.postura), CircleShape))
+                Text(
+                    if (c.esDistancia) "Criterio ${i + 1}: ${"%.2f".format(c.angulo)} anchos de hombro"
+                    else "Criterio ${i + 1}: ${c.angulo.toInt()}°",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                )            }
         }
-
         if (resultado?.estado == EstadoReto.EXITO) {
-            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onRepetir) { Text("Repetir") }
-                Button(onClick = onVolver) { Text("Volver al Menú") }
+                BotonCristal("Repetir", onRepetir, icono = Icons.Default.Refresh, plano = true)
+                BotonCristal("Volver", onVolver, plano = true)
             }
         }
     }
@@ -615,33 +852,37 @@ private fun EsqueletoOverlay(
         val neutro = Color(0xCCFFFFFF)
 
         // Sin estados por articulación (calibración o cuerpo perdido): todo del mismo color
-        val porArticulacion = estadoPuntos != null && estadoHuesos != null
-        val colorHueso = { a: Int, b: Int ->
-            if (!porArticulacion) color
-            else estadoHuesos!![minOf(a, b) to maxOf(a, b)]?.let { colorPostura(it) } ?: neutro
-        }
+        val huesos = estadoHuesos
+        val articulaciones = estadoPuntos
+        val porArticulacion = huesos != null && articulaciones != null
 
-        // Primero los huesos sin evaluar y después los evaluados, para que no queden tapados
+        fun colorDeHueso(a: Int, b: Int): Color =
+            if (huesos == null) color
+            else huesos[minOf(a, b) to maxOf(a, b)]?.let { colorPostura(it) } ?: neutro
+
+        // Primero los huesos sin evaluar y después los evaluados (con halo), para que no queden tapados
         for (pasada in 0..1) {
             PoseLandmarker.POSE_LANDMARKS.forEach { c ->
                 val a = c.start()
                 val b = c.end()
                 if (a < puntos.size && b < puntos.size) {
-                    val col = colorHueso(a, b)
+                    val col = colorDeHueso(a, b)
                     val evaluado = porArticulacion && col != neutro
                     if ((pasada == 1) == evaluado) {
+                        if (evaluado) drawLine(col.copy(alpha = 0.25f), puntos[a], puntos[b], strokeWidth = 24f)
                         drawLine(col, puntos[a], puntos[b], strokeWidth = if (evaluado) 10f else 6f)
                     }
                 }
             }
         }
         puntos.forEachIndexed { i, punto ->
-            val estado = estadoPuntos?.get(i)
+            val estado = articulaciones?.get(i)
             val col = when {
                 !porArticulacion -> color
                 estado != null -> colorPostura(estado)
                 else -> neutro
             }
+            if (estado != null) drawCircle(col.copy(alpha = 0.25f), radius = 26f, center = punto)
             drawCircle(col, radius = if (estado != null) 15f else 9f, center = punto)
         }
     }

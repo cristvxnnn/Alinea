@@ -116,9 +116,17 @@
   },
   "yoga_guerrero_ii_izquierdo": {
     "nombre": "Guerrero II", "categoria": "Yoga Básico",
-    "instrucciones": "Piernas bien abiertas, rodilla izquierda doblada, pierna derecha recta y brazos extendidos a los lados.",
     "imagen": "pose_yoga_guerrero_ii_izquierdo",
-    "pasos": ["Abre las piernas con un paso amplio y gira el pie izquierdo hacia afuera.", "Dobla la rodilla izquierda y mantén recta la pierna derecha.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
+    "instrucciones": "Postura de pie con las piernas muy abiertas: una rodilla doblada, la otra pierna recta y los brazos extendidos a los lados.",
+    "pasos": [
+      "Ponte de pie, de frente a la cámara y a unos 2 metros. Necesitas espacio para abrir brazos y piernas.",
+      "Separa los pies unos 1 metros, más o menos el largo de una de tus piernas.",
+      "Gira el pie izquierdo hacia afuera, hacia tu izquierda. El pie derecho queda casi recto.",
+      "Dobla la rodilla izquierda hasta dejarla justo encima del tobillo, sin pasarte de los dedos del pie.",
+      "Estira del todo la pierna derecha, empujando el suelo con el pie.",
+      "Levanta los dos brazos a los lados, a la altura de los hombros, rectos y paralelos al suelo.",
+      "Mantén el pecho de frente a la cámara y la espalda recta. Sostén respirando con calma."
+    ],
     "criterios": [
       {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [75, 130]},
       {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [150, 180]},
@@ -133,10 +141,17 @@
   },
   "yoga_guerrero_ii_derecho": {
     "nombre": "Guerrero II (lado derecho)", "categoria": "Yoga Básico",
-    "instrucciones": "Piernas bien abiertas, rodilla derecha doblada, pierna izquierda recta y brazos extendidos a los lados.",
     "imagen": "pose_yoga_guerrero_ii_derecho",
-    "pasos": ["Abre las piernas con un paso amplio y gira el pie derecho hacia afuera.", "Dobla la rodilla derecha y mantén recta la pierna izquierda.", "Extiende los brazos a los lados, a la altura de los hombros.", "Mantén el torso derecho y sostén la postura."],
-    "criterios": [
+    "instrucciones": "Postura de pie con las piernas muy abiertas: una rodilla doblada, la otra pierna recta y los brazos extendidos a los lados.",
+    "pasos": [
+      "Ponte de pie, de frente a la cámara y a unos 2 metros. Necesitas espacio para abrir brazos y piernas.",
+      "Separa los pies unos 1 metros, más o menos el largo de una de tus piernas.",
+      "Gira el pie derecho hacia afuera, hacia tu derecha. El pie izquierdo queda casi recto.",
+      "Dobla la rodilla derecha hasta dejarla justo encima del tobillo, sin pasarte de los dedos del pie.",
+      "Estira del todo la pierna izquierda, empujando el suelo con el pie.",
+      "Levanta los dos brazos a los lados, a la altura de los hombros, rectos y paralelos al suelo.",
+      "Mantén el pecho de frente a la cámara y la espalda recta. Sostén respirando con calma."
+    ],    "criterios": [
       {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [75, 130]},
       {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [150, 180]},
       {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "LEFT_ELBOW"], "rango_esperado": [65, 115]},
@@ -177,15 +192,20 @@
   },
   "yoga_mariposa": {
     "nombre": "Postura de la Mariposa", "categoria": "Yoga Básico",
-    "instrucciones": "Sentado con la espalda recta, las plantas de los pies juntas y las rodillas abiertas hacia los lados.",
+    "instrucciones": "Sentado, con las plantas de los pies juntas y las rodillas abiertas hacia los lados, como las alas de una mariposa.",
     "imagen": "pose_yoga_mariposa",
-    "pasos": ["Siéntate con la espalda recta, de frente a la cámara.", "Junta las plantas de los pies y acércalas al cuerpo.", "Deja que las rodillas caigan hacia los lados, sin forzarlas.", "Mantén la espalda erguida y sostén respirando con calma."],
+    "pasos": [
+      "Siéntate en el suelo, de frente a la cámara, con la espalda recta.",
+      "Dobla las rodillas y junta las plantas de los pies, frente a frente.",
+      "Acerca los talones al cuerpo hasta donde sea cómodo.",
+      "Deja que las rodillas caigan hacia los lados, bien separadas, sin forzarlas.",
+      "Mantén la espalda erguida y sostén respirando con calma."
+    ],
     "criterios": [
-      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [25, 80]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [25, 80]},
-      {"puntos": ["RIGHT_HIP", "LEFT_HIP", "LEFT_KNEE"], "rango_esperado": [130, 180]},
-      {"puntos": ["LEFT_HIP", "RIGHT_HIP", "RIGHT_KNEE"], "rango_esperado": [130, 180]},
-      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]}
+      {"puntos": ["LEFT_HIP", "LEFT_KNEE", "LEFT_ANKLE"], "rango_esperado": [5, 100]},
+      {"puntos": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"], "rango_esperado": [5, 100]},
+      {"tipo": "distancia", "puntos": ["LEFT_KNEE", "RIGHT_KNEE"], "rango_esperado": [1.4, 4.0]},
+      {"tipo": "distancia", "puntos": ["LEFT_ANKLE", "RIGHT_ANKLE"], "rango_esperado": [0, 0.9]}
     ],
     "hold_time_seconds": 10
   },
@@ -209,10 +229,8 @@
     "vista": "busto",
     "pasos": ["Siéntate o ponte de pie, de frente a la cámara, con la espalda recta.", "Deja los hombros relajados y a la misma altura.", "Lleva la oreja izquierda hacia el hombro izquierdo, sin levantar el hombro.", "Sostén sin forzar el cuello."],
     "criterios": [
-      {"puntos": ["LEFT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [75, 140]},
-      {"puntos": ["RIGHT_EAR", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [15, 45]},
-      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [65, 100]}
+      {"puntos": ["LEFT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [68, 150]},
+      {"tipo": "distancia", "puntos": ["LEFT_EAR", "LEFT_SHOULDER"], "rango_esperado": [0.1, 0.55]}
     ],
     "hold_time_seconds": 10
   },
@@ -223,10 +241,8 @@
     "vista": "busto",
     "pasos": ["Siéntate o ponte de pie, de frente a la cámara, con la espalda recta.", "Deja los hombros relajados y a la misma altura.", "Lleva la oreja derecha hacia el hombro derecho, sin levantar el hombro.", "Sostén sin forzar el cuello."],
     "criterios": [
-      {"puntos": ["RIGHT_EAR", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [75, 140]},
-      {"puntos": ["LEFT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [15, 45]},
-      {"puntos": ["LEFT_HIP", "LEFT_SHOULDER", "RIGHT_SHOULDER"], "rango_esperado": [65, 100]},
-      {"puntos": ["RIGHT_HIP", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [65, 100]}
+      {"puntos": ["RIGHT_EAR", "RIGHT_SHOULDER", "LEFT_SHOULDER"], "rango_esperado": [68, 150]},
+      {"tipo": "distancia", "puntos": ["RIGHT_EAR", "RIGHT_SHOULDER"], "rango_esperado": [0.1, 0.55]}
     ],
     "hold_time_seconds": 10
   }

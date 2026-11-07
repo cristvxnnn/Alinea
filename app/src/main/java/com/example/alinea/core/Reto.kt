@@ -1,11 +1,17 @@
 package com.example.alinea.core
 
+enum class TipoCriterio { ANGULO, DISTANCIA }
+
+/**
+ * ANGULO: 3 landmarks (el 2.º es el vértice), rango en grados.
+ * DISTANCIA: 2 landmarks, rango en anchos de hombro (distancia / distancia entre los hombros).
+ */
 data class Criterio(
     val indices: List<Int>,
     val rangoMin: Double,
     val rangoMax: Double,
+    val tipo: TipoCriterio = TipoCriterio.ANGULO,
 )
-
 data class Reto(
     val id: String,
     val nombre: String,

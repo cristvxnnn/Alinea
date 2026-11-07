@@ -1,5 +1,6 @@
 package com.example.alinea
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,15 +38,20 @@ import com.example.alinea.core.Reto
 private val AZUL = Color(0xFF1A73E8)
 private val TEXTO = Color(0xFF0B2A4A)
 
-/** Cápsula compacta, a modo de isla flotante, que abre la guía durante el ejercicio. */
+/** Cápsula compacta,  que abre la guía durante el ejercicio. */
 @Composable
 fun CapsulaGuia(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val forma = RoundedCornerShape(50)
     Row(
         modifier = modifier
             .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(50))
-            .background(Color(0xE6000000))
-            .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(50))
+            .clip(forma)
+            .background(Color(0xCC0A1A33))
+            .border(
+                1.5.dp,
+                Brush.linearGradient(listOf(Color(0xFF4285F4), Color(0xFF7C5CFF), Color(0xFF22D3EE))),
+                forma,
+            )
             .clickable(
                 onClickLabel = "Abrir la guía del ejercicio",
                 role = Role.Button,
@@ -59,8 +65,7 @@ fun CapsulaGuia(onClick: () -> Unit, modifier: Modifier = Modifier) {
         Text("Ver guía", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
-
-/** Figurita de palitos: representa "referencia de la postura". */
+/**representa "referencia de la postura". */
 @Composable
 private fun IconoGuia(modifier: Modifier = Modifier) {
     Canvas(modifier) {

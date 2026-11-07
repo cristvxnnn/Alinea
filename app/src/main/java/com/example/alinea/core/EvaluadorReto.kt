@@ -1,13 +1,17 @@
 package com.example.alinea.core
 
+import kotlin.math.hypot
+
+
 enum class Postura { APROBADO, CORRIGIENDO, INCORRECTO }
 enum class EstadoReto { ANALIZANDO, SOSTENIENDO, EXITO }
 enum class Sonido { TICK, EXITO, ERROR, LISTO }
 
 data class ResultadoCriterio(
-    val angulo: Double,
+    val angulo: Double,                      // grados, o distancia relativa si esDistancia
     val postura: Postura,
-    val indices: List<Int> = emptyList(),   // los 3 landmarks del criterio (el 2.º es el vértice)
+    val indices: List<Int> = emptyList(),    // 3 landmarks (ángulo) o 2 (distancia)
+    val esDistancia: Boolean = false,
 )
 
 data class Resultado(
@@ -44,22 +48,34 @@ class EvaluadorReto(
         sinAprobarDesde = null
     }
 
-    private fun clasificar(angulo: Double, c: Criterio) = when {
-        angulo in c.rangoMin..c.rangoMax -> Postura.APROBADO
-        angulo in (c.rangoMin - tolerancia)..c.rangoMin ||
-                angulo in c.rangoMax..(c.rangoMax + tolerancia) -> Postura.CORRIGIENDO
-        else -> Postura.INCORRECTO
+    private fun clasificar(valor: Double, c: Criterio): Postura {
+        val tol = if (c.tipo == TipoCriterio.DISTANCIA) 0.15 else tolerancia
+        return when {
+            valor in c.rangoMin..c.rangoMax -> Postura.APROBADO
+            valor in (c.rangoMin - tol)..c.rangoMin ||
+                    valor in c.rangoMax..(c.rangoMax + tol) -> Postura.CORRIGIENDO
+            else -> Postura.INCORRECTO
+        }
     }
-
     /** puntos: los 33 landmarks ya escalados a píxeles. ahora: segundos. */
     fun evaluar(puntos: List<Punto>, ahora: Double): Resultado {
         require(puntos.size >= 33) { "Se esperan 33 landmarks" }
 
         val porCriterio = reto.criterios.map { c ->
-            val angulo = calcularAngulo(
-                puntos[c.indices[0]], puntos[c.indices[1]], puntos[c.indices[2]]
-            )
-            ResultadoCriterio(angulo, clasificar(angulo, c), c.indices)
+            when (c.tipo) {
+                TipoCriterio.ANGULO -> {
+                    val angulo = calcularAngulo(
+                        puntos[c.indices[0]], puntos[c.indices[1]], puntos[c.indices[2]]
+                    )
+                    ResultadoCriterio(angulo, clasificar(angulo, c), c.indices)
+                }
+                TipoCriterio.DISTANCIA -> {
+                    val valor = distanciaRelativa(
+                        puntos[c.indices[0]], puntos[c.indices[1]], puntos[11], puntos[12]
+                    )
+                    ResultadoCriterio(valor, clasificar(valor, c), c.indices, esDistancia = true)
+                }
+            }
         }
         val postura = when {
             porCriterio.all { it.postura == Postura.APROBADO } -> Postura.APROBADO
@@ -133,4 +149,10 @@ class EvaluadorReto(
         sinAprobarDesde = null
         return Sonido.ERROR
     }
+}
+/** Distancia entre a y b, medida en anchos de hombro. NaN si los hombros coinciden (no aprueba). */
+private fun distanciaRelativa(a: Punto, b: Punto, hombroIzq: Punto, hombroDer: Punto): Double {
+    val ancho = hypot((hombroIzq.x - hombroDer.x).toDouble(), (hombroIzq.y - hombroDer.y).toDouble())
+    if (ancho < 1e-6) return Double.NaN
+    return hypot((a.x - b.x).toDouble(), (a.y - b.y).toDouble()) / ancho
 }
