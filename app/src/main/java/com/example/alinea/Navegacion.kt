@@ -156,8 +156,12 @@ fun AppNavegacion() {
                 ) { e ->
                     val id = e.arguments?.getString("id")
                     val reto = catalogo.getOrNull()?.firstOrNull { it.id == id }
-                    PantallaCamara(reto = reto, onVolver = { nav.popBackStack() })
-                }
+                    PantallaCamara(
+                        reto = reto,
+                        onVolver = { nav.popBackStack() },
+                        resumenHoy = resumen,
+                        metas = metas,
+                    )                }
 
             }
         }
